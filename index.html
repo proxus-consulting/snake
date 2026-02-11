@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+        }
+
+        h1 {
+            margin: 20px 0;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            background: linear-gradient(45deg, #00ff88, #00ccff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        #pygame_container {
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            border-radius: 10px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #loading {
+            text-align: center;
+            padding: 20px;
+            font-size: 1.2em;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid #00ff88;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .info {
+            margin-top: 20px;
+            text-align: center;
+            opacity: 0.8;
+            font-size: 0.9em;
+        }
+
+        .controls {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            max-width: 600px;
+        }
+
+        .controls h3 {
+            margin: 0 0 10px 0;
+            color: #00ff88;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <h1>🐍 Snake Game 🐍</h1>
+
+    <div id="pygame_container">
+        <div id="loading">
+            <div class="spinner"></div>
+            <p>Indlæser spil...</p>
+        </div>
+    </div>
+
+    <div class="controls">
+        <h3>🎮 Kontroller</h3>
+        <p>⬆️⬇️⬅️➡️ Piletaster - Bevæg slangen</p>
+        <p>🔄 ESC - Menu / Pause</p>
+        <p>🎯 Spis mad for at vokse og score point!</p>
+    </div>
+
+    <div class="info">
+        <p>Lavet med Python & Pygame • Kører i browseren via Pygbag</p>
+    </div>
+
+    <script src="pygbag.js"></script>
+</body>
+</html>

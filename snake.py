@@ -5,6 +5,7 @@ import math
 import json
 import os
 import struct
+import asyncio
 
 # --- Konstanter ---
 CELL_SIZE = 20
@@ -3427,17 +3428,18 @@ class Game:
         self.screen.blit(score_text, score_text.get_rect(center=(cx, cy + 15)))
         self.screen.blit(hint, hint.get_rect(center=(cx, cy + 55)))
 
-    def run(self):
+    async def run(self):
         running = True
         while running:
             running = self.handle_events()
             self.update()
             self.draw()
             self.clock.tick(self.fps if self.state == "PLAYING" else 30)
+            await asyncio.sleep(0)  # Yield control to browser
 
         pygame.quit()
         sys.exit()
 
 
 if __name__ == "__main__":
-    Game().run()
+    asyncio.run(Game().run())
