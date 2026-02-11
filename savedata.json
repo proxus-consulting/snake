@@ -1,0 +1,12 @@
+{
+  "p1_coins": 33,
+  "p2_coins": 11,
+  "p1_ammo": 23,
+  "p2_ammo": 30,
+  "p1_power": 23,
+  "p2_power": 0,
+  "p1_gun": "auto",
+  "p2_gun": null,
+  "p1_snake_type": "robot",
+  "p2_snake_type": "gold"
+}
