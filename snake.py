@@ -140,6 +140,9 @@ MEGA_FOOD_INTERVAL = 30     # sekunder mellem mega-food spawns (10 min / 20 = 30
 # Coin / Bullet / Gun
 COIN_COLOR = (255, 215, 0)
 COIN_COLOR_DARK = (200, 160, 0)
+MONEY_BILL_COLOR = (85, 200, 85)  # Grøn pengeseddel
+MONEY_BILL_DARK = (60, 140, 60)
+MONEY_BILL_VALUE = 10  # Pengesedler giver 10 coins
 BULLET_COLOR = (255, 100, 50)
 BULLET_SPEED = 2  # celler per game-tick
 AMMO_PRICE = 1      # 1 coin = 5 skud
@@ -1594,6 +1597,59 @@ class Coin:
             surface.blit(txt, txt.get_rect(center=(cx, cy)))
 
 
+class MoneyBill:
+    """Pengeseddel der giver 10 coins når den samles op."""
+    _font = None
+
+    def __init__(self, pos):
+        self.pos = pos
+        self.age = 0
+        self.lifetime = 180  # forsvinder efter 180 ticks (lidt længere end coins)
+
+    @property
+    def expired(self):
+        return self.age >= self.lifetime
+
+    def tick(self):
+        self.age += 1
+
+    def draw(self, surface, game_tick):
+        x, y = self.pos
+        px = x * CELL_SIZE
+        py = y * CELL_SIZE + SCOREBOARD_H
+        cx = px + CELL_SIZE // 2
+        cy = py + CELL_SIZE // 2
+
+        # Svævende/vibrerende effekt
+        float_offset = int(math.sin(game_tick * 0.1) * 2)
+        cy += float_offset
+
+        # Pengeseddel størrelse (rektangulær)
+        bill_w = CELL_SIZE - 4
+        bill_h = int(CELL_SIZE * 0.6)
+
+        # Skygge
+        shadow_rect = pygame.Rect(cx - bill_w // 2 + 2, cy - bill_h // 2 + 2, bill_w, bill_h)
+        pygame.draw.rect(surface, _darken(MONEY_BILL_COLOR, 100), shadow_rect, border_radius=2)
+
+        # Pengeseddel baggrund
+        bill_rect = pygame.Rect(cx - bill_w // 2, cy - bill_h // 2, bill_w, bill_h)
+        pygame.draw.rect(surface, MONEY_BILL_COLOR, bill_rect, border_radius=2)
+
+        # Mørk kant
+        pygame.draw.rect(surface, MONEY_BILL_DARK, bill_rect, 2, border_radius=2)
+
+        # Dekorativ kant indeni
+        inner_rect = pygame.Rect(cx - bill_w // 2 + 3, cy - bill_h // 2 + 2, bill_w - 6, bill_h - 4)
+        pygame.draw.rect(surface, _darken(MONEY_BILL_COLOR, 30), inner_rect, 1, border_radius=1)
+
+        # "10" tekst i midten
+        if MoneyBill._font is None:
+            MoneyBill._font = pygame.font.SysFont("Consolas", 10, bold=True)
+        txt = MoneyBill._font.render("10", True, (30, 80, 30))
+        surface.blit(txt, txt.get_rect(center=(cx, cy)))
+
+
 class EnemyDog:
     """Fjendtlig hund der jager slangen og dræber ved kontakt."""
     DOG_MOVE_INTERVAL = 3  # bevæger sig hvert N. game-tick (langsommere end slangen)
@@ -2175,6 +2231,7 @@ class Game:
         self.snake2 = Snake((GRID_W - 4, GRID_H - 4), LEFT, BLUE, BLUE_DARK, BLUE_BELLY)
         self.foods = []
         self.coin_items = []
+        self.money_bills = []
         self.bullets = []
         self.enemies = []
         self.enemy_spawn_cd = 0
@@ -2256,6 +2313,8 @@ class Game:
             positions.add(f.pos)
         for c in self.coin_items:
             positions.add(c.pos)
+        for b in self.money_bills:
+            positions.add(b.pos)
         return positions
 
     def _spawn_food(self, food_type):
@@ -2277,6 +2336,17 @@ class Game:
         if free:
             pos = random.choice(free)
             self.coin_items.append(Coin(pos))
+
+    def _spawn_money_bill(self):
+        """Spawn en pengeseddel (10 coins) - sjældnere end normale coins."""
+        occupied = self._occupied()
+        free = [
+            (x, y) for x in range(GRID_W) for y in range(GRID_H)
+            if (x, y) not in occupied
+        ]
+        if free:
+            pos = random.choice(free)
+            self.money_bills.append(MoneyBill(pos))
 
     def _shoot(self, player_idx):
         """Spiller skyder. Kræver kanon + ammo."""
@@ -2364,6 +2434,16 @@ class Game:
                 nx, ny = cx_c + dx, cy_c + dy
                 if 0 <= nx < GRID_W and 0 <= ny < GRID_H and (nx, ny) not in occupied and (nx, ny) not in self.ruins:
                     coin.pos = (nx, ny)
+        # Ryk pengesedler tættere
+        for bill in self.money_bills:
+            bx, by = bill.pos
+            dist = abs(bx - hx) + abs(by - hy)
+            if dist <= VACUUM_RANGE and dist > 0:
+                dx = (1 if hx > bx else -1) if hx != bx else 0
+                dy = (1 if hy > by else -1) if hy != by else 0
+                nx, ny = bx + dx, by + dy
+                if 0 <= nx < GRID_W and 0 <= ny < GRID_H and (nx, ny) not in occupied and (nx, ny) not in self.ruins:
+                    bill.pos = (nx, ny)
 
     def _generate_safe_zones(self):
         """Positioner der skal holdes fri for ruiner (spawn-områder)."""
@@ -2407,6 +2487,7 @@ class Game:
         self.trees = generate_trees(tree_count, tree_occupied)
         self.foods = []
         self.coin_items = []
+        self.money_bills = []
         self.bullets = []
         self.enemies = []
         self.enemy_spawn_cd = 0
@@ -2666,6 +2747,10 @@ class Game:
             else:
                 self.coin_spawn_cooldown = 3
 
+        # --- Money Bills (pengesedler) - sjældnere end coins ---
+        if random.random() < 0.003:  # ~0.3% chance per tick
+            self._spawn_money_bill()
+
         # Coin opsamling
         coin_eaten = []
         for coin in self.coin_items:
@@ -2681,6 +2766,22 @@ class Game:
         for coin in self.coin_items:
             coin.tick()
         self.coin_items = [c for c in self.coin_items if c not in coin_eaten and not c.expired]
+
+        # Money Bill opsamling (10 coins!)
+        bills_eaten = []
+        for bill in self.money_bills:
+            if self.snake1.alive and self.snake1.head() == bill.pos:
+                self.coins[0] += MONEY_BILL_VALUE
+                bills_eaten.append(bill)
+            elif self._two_player and self.snake2.alive and self.snake2.head() == bill.pos:
+                self.coins[1] += MONEY_BILL_VALUE
+                bills_eaten.append(bill)
+        if bills_eaten:
+            self.sfx["coin_pling"].play()  # Brug samme lyd (eller lav ny senere)
+            self._save_wallet()
+        for bill in self.money_bills:
+            bill.tick()
+        self.money_bills = [b for b in self.money_bills if b not in bills_eaten and not b.expired]
 
         # --- Auto-kanon (hold-to-fire) ---
         keys = pygame.key.get_pressed()
@@ -3346,6 +3447,9 @@ class Game:
         # Coins
         for coin in self.coin_items:
             coin.draw(self.screen, self.game_tick)
+        # Money Bills (pengesedler)
+        for bill in self.money_bills:
+            bill.draw(self.screen, self.game_tick)
         for food in self.foods:
             food.draw(self.screen, self.game_tick)
         # Bullets
